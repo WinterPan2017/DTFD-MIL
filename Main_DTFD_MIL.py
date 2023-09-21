@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from Model.network import    Classifier_1fc, DimReduction
 import numpy as np
 from utils import eval_metric
+import pandas as pd
 
 parser = argparse.ArgumentParser(description='abc')
 testMask_dir = '' ## Point to the Camelyon test set mask location
@@ -404,8 +405,14 @@ def print_log(tstr, f):
 
 def reOrganize_mDATA_test(mDATA):
 
-    tumorSlides = os.listdir(testMask_dir)
-    tumorSlides = [sst.split('.')[0] for sst in tumorSlides]
+    # tumorSlides = os.listdir(testMask_dir)
+    # tumorSlides = [sst.split('.')[0] for sst in tumorSlides]
+    # modify for easy get test label
+    df = pd.read_csv("/home/pwt/PosMIL/datasets/camelyon16_resnet50_10fold.csv")
+    tumorSlides = set()
+    for i, row in df.iterrows():
+        if row[2] in [0] and row[1] == 1:
+            tumorSlides.add(row[0])
 
     SlideNames = []
     FeatList = []
