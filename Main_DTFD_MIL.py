@@ -50,6 +50,12 @@ parser.add_argument('--temperature', default=1, type=float)
 parser.add_argument('--num_MeanInference', default=1, type=int)
 parser.add_argument('--distill_type', default='AFS', type=str)   ## MaxMinS, MaxS, AFS
 
+# unified dataset settings
+parser.add_argument('--csv_path', default='', type=str)  # csv file to describe the data split
+parser.add_argument('--feature_dir', default='', type=str)  # feature dir
+parser.add_argument('--fold', default=1, type=int) # val fold
+parser.add_argument('--nfold', default=5, type=int) # number of folds
+
 torch.manual_seed(32)
 torch.cuda.manual_seed(32)
 np.random.seed(32)
@@ -84,16 +90,21 @@ def main():
         f.write(json.dumps(z))
     log_file = open(log_dir, 'a')
 
-    with open(params.mDATA0_dir_train0, 'rb') as f:
-        mDATA_train = pickle.load(f)
-    with open(params.mDATA0_dir_val0, 'rb') as f:
-        mDATA_val = pickle.load(f)
-    with open(params.mDATA_dir_test0, 'rb') as f:
-        mDATA_test = pickle.load(f)
+    # with open(params.mDATA0_dir_train0, 'rb') as f:
+    #     mDATA_train = pickle.load(f)
+    # with open(params.mDATA0_dir_val0, 'rb') as f:
+    #     mDATA_val = pickle.load(f)
+    # with open(params.mDATA_dir_test0, 'rb') as f:
+    #     mDATA_test = pickle.load(f)
 
-    SlideNames_train, FeatList_train, Label_train = reOrganize_mDATA(mDATA_train)
-    SlideNames_val, FeatList_val, Label_val = reOrganize_mDATA(mDATA_val)
-    SlideNames_test, FeatList_test, Label_test = reOrganize_mDATA_test(mDATA_test)
+    # SlideNames_train, FeatList_train, Label_train = reOrganize_mDATA(mDATA_train)
+    # SlideNames_val, FeatList_val, Label_val = reOrganize_mDATA(mDATA_val)
+    # SlideNames_test, FeatList_test, Label_test = reOrganize_mDATA_test(mDATA_test)
+
+    # unified dataset
+    SlideNames_train, FeatList_train, Label_train = get_data("train", params.csv_path, params.feature_dir, params.fold, params.nfold)
+    SlideNames_val, FeatList_val, Label_val = get_data("val", params.csv_path, params.feature_dir, params.fold, params.nfold)
+    SlideNames_test, FeatList_test, Label_test = get_data("test", params.csv_path, params.feature_dir, params.fold, params.nfold)
 
     print_log(f'training slides: {len(SlideNames_train)}, validation slides: {len(SlideNames_val)}, test slides: {len(SlideNames_test)}', log_file)
 
@@ -462,6 +473,29 @@ def reOrganize_mDATA(mDATA):
         FeatList.append(featGroup)
 
     return SlideNames, FeatList, Label
+
+def get_data(state, csv_path, feature_dir, fold, nfolds):
+    #---->split dataset
+    if state == 'train':
+        folds = [i for i in range(1, nfolds+1)]
+        folds.remove(fold)
+    if state == 'val':
+        folds = [fold]
+    if state == 'test':
+        folds = [0]
+
+    feature_list = []
+    label_list = []
+    name_list = []
+    with open(csv_path, "r") as f:
+        for row in f.readlines():
+            name, label, fold, path = row.strip().split(",")
+            if int(fold) in folds:
+                feature_list.append(torch.from_numpy(np.load(os.path.join(feature_dir, name+".npz"))["features"]))
+                label_list.append(int(label))
+                name_list.append(name)
+    return name_list, feature_list, label_list
+
 
 if __name__ == "__main__":
     main()
