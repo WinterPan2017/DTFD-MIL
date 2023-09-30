@@ -65,7 +65,7 @@ def main():
     params = parser.parse_args()
     epoch_step = json.loads(params.epoch_step)
 
-    in_chn = 1024
+    in_chn = 512
 
     classifier = Classifier_1fc(params.mDim, params.num_cls, params.droprate).to(params.device)
     attention = Attention(params.mDim).to(params.device)
